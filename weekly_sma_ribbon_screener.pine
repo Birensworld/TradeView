@@ -1,0 +1,85 @@
+//@version=5
+// Weekly SMA Ribbon Screener
+// Filters: optionable-proxy instrument type, price > $15, weekly 10/20/30/40 SMA
+// ribbon within X% of each other with the 10w SMA crossing the other three.
+indicator("Weekly SMA Ribbon Screener (Stocks/ETFs > $15)", overlay=true)
+
+// ---------------- Inputs ----------------
+priceMin  = input.float(15.0, "Minimum Stock Price", minval=0)
+tightPct  = input.float(1.0, "Max SMA Spread (%)", minval=0.01, step=0.1)
+len1      = input.int(10, "Fast Weekly SMA Length")
+len2      = input.int(20, "Weekly SMA Length 2")
+len3      = input.int(30, "Weekly SMA Length 3")
+len4      = input.int(40, "Weekly SMA Length 4")
+showTable = input.bool(true, "Show Info Table")
+
+// ---------------- Instrument filter ----------------
+// Pine has no native "optionable" flag. syminfo.type is the closest proxy:
+// "stock" and "fund" (ETFs) are kept; futures/forex/crypto/index/bond are excluded.
+// Cross-check any hits against your broker's actual option chain before trading.
+isStock      = syminfo.type == "stock"
+isFund       = syminfo.type == "fund"
+instrumentOK = isStock or isFund
+
+// ---------------- Price filter ----------------
+priceOK = close >= priceMin
+
+// ---------------- Weekly SMAs ----------------
+wSma(len) =>
+    request.security(syminfo.tickerid, "W", ta.sma(close, len), lookahead=barmerge.lookahead_off)
+
+sma10w = wSma(len1)
+sma20w = wSma(len2)
+sma30w = wSma(len3)
+sma40w = wSma(len4)
+
+// ---------------- Ribbon tightness (all 4 SMAs within tightPct% of each other) ----------------
+hiSMA     = math.max(math.max(sma10w, sma20w), math.max(sma30w, sma40w))
+loSMA     = math.min(math.min(sma10w, sma20w), math.min(sma30w, sma40w))
+spreadPct = loSMA != 0 ? (hiSMA - loSMA) / loSMA * 100 : na
+ribbonTight = spreadPct <= tightPct
+
+// ---------------- 10w SMA crossing above 20w, 30w and 40w ----------------
+cross20 = ta.crossover(sma10w, sma20w)
+cross30 = ta.crossover(sma10w, sma30w)
+cross40 = ta.crossover(sma10w, sma40w)
+crossAll = cross20 and cross30 and cross40
+
+// Softer, persistent alternative: fully bullish-stacked ribbon (not just the exact cross bar)
+bullAligned = sma10w > sma20w and sma20w > sma30w and sma30w > sma40w
+
+screenerSignal = instrumentOK and priceOK and ribbonTight and crossAll ? 1 : 0
+
+// ---------------- Plots ----------------
+plot(sma10w, "10w SMA", color=color.new(color.lime, 0), linewidth=2)
+plot(sma20w, "20w SMA", color=color.new(color.yellow, 0), linewidth=2)
+plot(sma30w, "30w SMA", color=color.new(color.orange, 0), linewidth=2)
+plot(sma40w, "40w SMA", color=color.new(color.red, 0), linewidth=2)
+
+plotshape(screenerSignal == 1, title="Screener Hit", style=shape.triangleup,
+     location=location.belowbar, color=color.new(color.aqua, 0), size=size.small)
+
+plot(screenerSignal, title="Screener Signal", display=display.none)
+
+bgcolor(screenerSignal == 1 ? color.new(color.aqua, 85) : na)
+
+// ---------------- Alerts ----------------
+alertcondition(screenerSignal == 1, title="Weekly SMA Ribbon Compression + Cross",
+     message="{{ticker}}: weekly 10/20/30/40 SMA ribbon is tight with the 10w SMA crossing the others.")
+
+// ---------------- Info table ----------------
+var table infoTable = table.new(position.top_right, 2, 6, border_width=1)
+if showTable and barstate.islast
+    table.cell(infoTable, 0, 0, "Instrument OK", text_color=color.white, bgcolor=color.new(color.gray, 0))
+    table.cell(infoTable, 1, 0, instrumentOK ? "YES" : "NO", text_color=instrumentOK ? color.lime : color.red)
+    table.cell(infoTable, 0, 1, "Price >= " + str.tostring(priceMin), text_color=color.white)
+    table.cell(infoTable, 1, 1, priceOK ? "YES" : "NO", text_color=priceOK ? color.lime : color.red)
+    table.cell(infoTable, 0, 2, "Ribbon Tight", text_color=color.white)
+    table.cell(infoTable, 1, 2, (ribbonTight ? "YES (" : "NO (") + str.tostring(spreadPct, "#.##") + "%)",
+         text_color=ribbonTight ? color.lime : color.red)
+    table.cell(infoTable, 0, 3, "10w Crossed All", text_color=color.white)
+    table.cell(infoTable, 1, 3, crossAll ? "YES" : "NO", text_color=crossAll ? color.lime : color.red)
+    table.cell(infoTable, 0, 4, "Bull Aligned", text_color=color.white)
+    table.cell(infoTable, 1, 4, bullAligned ? "YES" : "NO", text_color=bullAligned ? color.lime : color.red)
+    table.cell(infoTable, 0, 5, "SCREENER SIGNAL", text_color=color.white, bgcolor=color.new(color.blue, 0))
+    table.cell(infoTable, 1, 5, screenerSignal == 1 ? "MATCH" : "-", text_color=screenerSignal == 1 ? color.aqua : color.gray)
