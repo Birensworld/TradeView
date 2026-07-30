@@ -48,7 +48,8 @@ crossAll = cross20 and cross30 and cross40
 // Softer, persistent alternative: fully bullish-stacked ribbon (not just the exact cross bar)
 bullAligned = sma10w > sma20w and sma20w > sma30w and sma30w > sma40w
 
-screenerSignal = instrumentOK and priceOK and ribbonTight and crossAll ? 1 : 0
+screenerSignal     = instrumentOK and priceOK and ribbonTight and crossAll ? 1 : 0
+screenerSignalSoft = instrumentOK and priceOK and ribbonTight and bullAligned ? 1 : 0
 
 // ---------------- Plots ----------------
 plot(sma10w, "10w SMA", color=color.new(color.lime, 0), linewidth=2)
@@ -59,7 +60,14 @@ plot(sma40w, "40w SMA", color=color.new(color.red, 0), linewidth=2)
 plotshape(screenerSignal == 1, title="Screener Hit", style=shape.triangleup,
      location=location.belowbar, color=color.new(color.aqua, 0), size=size.small)
 
-plot(screenerSignal, title="Screener Signal", display=display.none)
+// Each plot below shows up as its own filterable/sortable column in the Pine Screener,
+// so you can build the "all NYSE stocks that match" scan without opening every chart.
+plot(screenerSignal, title="Screener Signal (Strict Cross)", display=display.none)
+plot(screenerSignalSoft, title="Screener Signal (Bull Aligned)", display=display.none)
+plot(instrumentOK ? 1 : 0, title="Instrument OK", display=display.none)
+plot(priceOK ? 1 : 0, title="Price OK", display=display.none)
+plot(ribbonTight ? 1 : 0, title="Ribbon Tight", display=display.none)
+plot(spreadPct, title="SMA Spread %", display=display.none)
 
 bgcolor(screenerSignal == 1 ? color.new(color.aqua, 85) : na)
 
