@@ -43,3 +43,9 @@ AddChartBubble(signal, low, "POTENTIAL MORNING STAR", Color.GRAY, no);
 AssignPriceColor(if signal then Color.CYAN else Color.CURRENT);
 
 Alert(signal, "Potential Morning Star setup: long red day + long-wick star day", Alert.BAR, Sound.Ring);
+
+# ---- Diagnostic: confirms what date ToS is treating as bar 0 ("today") ----
+# If this doesn't match today's actual date when you check after the close,
+# the platform's daily bar hasn't rolled over yet - that's a data-timing issue,
+# not a script issue. Remove this once you've confirmed timing is correct.
+AddLabel(yes, "Bar 0 date: " + GetYYYYMMDD(), Color.WHITE);
