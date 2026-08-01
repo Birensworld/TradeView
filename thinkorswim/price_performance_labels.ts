@@ -11,13 +11,6 @@
 
 declare lower;
 
-# Code for Volume
-#================================================================================================
-
-def volM = volume / 1000000;
-
-AddLabel(yes, "Volume: " + Round(volM, 2) + "M", Color.WHITE);
-
 input tradingDaysInYear = 252;
 input price = close;
 
@@ -62,3 +55,10 @@ AddLabel(
     "YTD change: " + value + "%",
     Color.GRAY
 );
+
+# Code for Volume
+#================================================================================================
+
+def volM = volume / 1000000;
+
+AddLabel(yes, "Volume: " + Round(volM, 2) + "M", Color.GRAY);
