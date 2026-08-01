@@ -18,20 +18,20 @@
 #   Fundamental > Market Cap   > 50,000,000
 #
 
-input minLowerLows = 3;    # how many of the 5 days before day 1 must post a lower low
-input longBodyPct  = 0.5;  # day-1 body must be >= this fraction of its high-low range
-input smallBodyPct = 0.3;  # day-2 body must be <= this fraction of its high-low range
-input longWickPct  = 0.5;  # day-2 lower wick must be >= this fraction of its high-low range
+input windowDays     = 14;  # trading days before day 1 checked for the downtrend
+input minNegativeDays = 8;  # how many of those days must close negative (red)
+input longBodyPct    = 0.5; # day-1 body must be >= this fraction of its high-low range
+input smallBodyPct   = 0.3; # day-2 body must be <= this fraction of its high-low range
+input longWickPct    = 0.5; # day-2 lower wick must be >= this fraction of its high-low range
 
-# ---- Prior downtrend: lower lows across the 5 trading days before day 1 ----
-def lowerLowCount =
-    (if low[2] < low[3] then 1 else 0) +
-    (if low[3] < low[4] then 1 else 0) +
-    (if low[4] < low[5] then 1 else 0) +
-    (if low[5] < low[6] then 1 else 0) +
-    (if low[6] < low[7] then 1 else 0);
+# ---- Prior downtrend: count of negative (red) days across the window before day 1 ----
+# Window is bars 2 .. (windowDays + 1), i.e. the windowDays sessions immediately
+# preceding day 1 (bar 1). Steeper/tighter trend = raise minNegativeDays or windowDays.
+def negativeDayCount = fold i = 2 to windowDays + 2
+    with count = 0
+    do count + (if GetValue(close, i) < GetValue(open, i) then 1 else 0);
 
-def priorDowntrend = lowerLowCount >= minLowerLows;
+def priorDowntrend = negativeDayCount >= minNegativeDays;
 
 # ---- Day 1 (bar 1): long bearish candle continuing the downtrend ----
 def day1Bearish = close[1] < open[1];
