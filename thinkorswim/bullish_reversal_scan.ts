@@ -7,15 +7,17 @@
 # type them - the earlier "zero results" bug across every prior version was
 # actually a fraction (0.5) mistakenly entered there as a whole number (50).
 #
-# STEP 4: adds day1WithinToday - day 1's close must land in the upper
-# day1UpperBandPct of TODAY's high-low range. First check that cross-references
-# day 1 against today's range instead of day 1's own range.
+# STEP 5: adds day2InUpperBand - today's candle BODY (not just its close) must
+# sit with its lower edge in the upper day2UpperBandPct of today's own
+# high-low range. No size constraint on the body itself, just position.
 #
-# Report back the match count, then we'll add day2InUpperBand next.
+# Report back the match count, then we'll add the 14-day prior-downtrend
+# window last (belowDay1Count == 0), since it's the most complex piece.
 #
 
-input longBodyPct     = 50; # day-1 body must be >= this % of its own high-low range
+input longBodyPct      = 50; # day-1 body must be >= this % of its own high-low range
 input day1UpperBandPct = 50; # day-1 close must fall in the top this-% of today's range
+input day2UpperBandPct = 60; # day-2 (today's) body must sit in the top this-% of today's range
 
 def day1Bearish = close[1] < open[1];
 def day1Range   = high[1] - low[1];
@@ -27,4 +29,8 @@ def day1WithinToday = day2Range > 0
                   and close[1] >= low + day2Range * (1 - day1UpperBandPct / 100)
                   and close[1] <= high;
 
-plot scan = day1Bearish and day1Long and day1WithinToday;
+def day2BodyLow     = Min(open, close);
+def day2InUpperBand = day2Range > 0
+                  and day2BodyLow >= low + day2Range * (1 - day2UpperBandPct / 100);
+
+plot scan = day1Bearish and day1Long and day1WithinToday and day2InUpperBand;
