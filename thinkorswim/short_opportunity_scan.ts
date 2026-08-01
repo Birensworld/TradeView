@@ -1,8 +1,7 @@
 #
 # Short Opportunity Scan - Stock Hacker Study Filter.
 #
-# DEBUG STEP 3: adds a %-move requirement over the same 15-bar window used for
-# the SMA-rising check:
+# Confirmed working (10 matches) as of DEBUG STEP 3:
 #   1. Uptrend: the 50-day SMA today is higher than the 50-day SMA
 #      risingLookback bars ago (default 15) - the average has been rising.
 #   2. Today's high is a new high for the trailing yearLookback bars
@@ -10,7 +9,13 @@
 #   3. Over the same risingLookback bars (1..15), the move from the window's
 #      low to its high is at least minMovePct% (default 30).
 #
-# Report the match count with your usual native filters.
+# DEBUG STEP 4: adds the all-time-high pair -
+#   4. Yesterday (bar 1) made a new all-time high vs. everything before it.
+#   5. Today (bar 0) ALSO made a new all-time high vs. everything before it -
+#      this holds regardless of where today closes (even if today closes
+#      below yesterday's close, as long as today's HIGH is still the new record).
+# Uses HighestAll(), which is untested in this scan so far (unlike the bounded
+# Highest()/Lowest() confirmed working above) - report the match count.
 #
 
 input smaLength      = 50;  # SMA length used for the uptrend check
@@ -28,4 +33,7 @@ def moveHigh = Highest(high[1], risingLookback);
 def movePct  = if moveLow > 0 then (moveHigh - moveLow) / moveLow * 100 else Double.NaN;
 def bigMove  = movePct >= minMovePct;
 
-plot scan = smaRising and yearHigh and bigMove;
+def prevDayATH = high[1] >= HighestAll(high[2]);
+def todayATH   = high >= HighestAll(high[1]);
+
+plot scan = smaRising and yearHigh and bigMove and prevDayATH and todayATH;
