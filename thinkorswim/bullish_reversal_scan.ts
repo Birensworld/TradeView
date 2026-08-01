@@ -1,49 +1,21 @@
 #
-# Potential Morning Star Setup (Stock Hacker) - 2-candle, unconfirmed
+# Bullish Reversal Scan - rebuilt from scratch, one criterion at a time.
 #
-# Flags the first two candles of a Morning Star before the 3rd/confirmation
-# candle exists, so you can watch a name ahead of a possible reversal:
-#   Day 1 (bar 1, yesterday): long bearish candle continuing the downtrend
-#   Day 2 (bar 0, today - the scan day): small body with a long wick, showing
-#     the rejection/indecision that a Morning Star's "star" candle needs
-# No 3rd candle is required by design - day 3 hasn't happened yet when the scan
-# fires; that candle is what would confirm the full Morning Star.
+# STEP 0 (sanity check): matches every symbol that passes your native Stock
+# Hacker filters (Optionable=Yes, Exchange=NYSE, Last Price>15, Volume>3,000,000,
+# Market Cap>50,000,000), with NO pattern logic at all.
 #
-# Pair this Study Filter with these NATIVE Stock Hacker filters (no code needed,
-# and they run first so the scan is fast):
-#   Basic Info  > Optionable   = Yes
-#   Basic Info  > Exchange     = NYSE
-#   Basic Info  > Last Price   > 15
-#   Basic Info  > Volume       > 3,000,000
-#   Fundamental > Market Cap   > 50,000,000
+# Save this as your Study Filter and run it. If this returns a healthy list of
+# names (should be at least dozens, likely hundreds), the Study Filter mechanism
+# itself is working and the problem has been in the pattern logic all along -
+# tell me the result count and we'll add the next criterion.
+#
+# If this ALSO returns zero or very few results, the issue is upstream of the
+# script entirely - check:
+#   - The filter condition is set to "scan is true" / "scan = 1" (not "= 0")
+#   - The 5 native filters aren't combined with an unintended AND that excludes
+#     everything (e.g. Exchange dropdown accidentally set to something else)
+#   - This saved study is the one actually selected in Add Study Filter
 #
 
-input windowDays     = 14;  # trading days before day 1 checked for the downtrend
-input minNegativeDays = 8;  # how many of those days must close negative (red)
-input longBodyPct    = 0.5; # day-1 body must be >= this fraction of its high-low range
-input smallBodyPct   = 0.3; # day-2 body must be <= this fraction of its high-low range
-input longWickPct    = 0.5; # day-2 lower wick must be >= this fraction of its high-low range
-
-# ---- Prior downtrend: count of negative (red) days across the window before day 1 ----
-# Window is bars 2 .. (windowDays + 1), i.e. the windowDays sessions immediately
-# preceding day 1 (bar 1). Steeper/tighter trend = raise minNegativeDays or windowDays.
-def negativeDayCount = fold i = 2 to windowDays + 2
-    with count = 0
-    do count + (if GetValue(close, i) < GetValue(open, i) then 1 else 0);
-
-def priorDowntrend = negativeDayCount >= minNegativeDays;
-
-# ---- Day 1 (bar 1): long bearish candle continuing the downtrend ----
-def day1Bearish = close[1] < open[1];
-def day1Range   = high[1] - low[1];
-def day1Body    = open[1] - close[1];
-def day1Long    = day1Range > 0 and day1Body >= day1Range * longBodyPct;
-
-# ---- Day 2 / today (bar 0): small body with a long lower wick (the "star") ----
-def day2Range     = high - low;
-def day2Body      = AbsValue(close - open);
-def day2LowerWick = Min(open, close) - low;
-def day2Small     = day2Range > 0 and day2Body <= day2Range * smallBodyPct;
-def day2LongWick  = day2Range > 0 and day2LowerWick >= day2Range * longWickPct;
-
-plot scan = priorDowntrend and day1Bearish and day1Long and day2Small and day2LongWick;
+plot scan = 1;
