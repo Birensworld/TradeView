@@ -4,26 +4,12 @@
 # chart. Apply via: Studies > Edit Studies > Create, paste this in, add to chart.
 #
 
-input windowDays      = 14; # trading days before day 1 checked for the downtrend
-input minNegativeDays = 8;  # how many of those days must close negative (red)
-input longBodyPct    = 0.5; # day-1 body must be >= this fraction of its high-low range
-input smallBodyPct   = 0.3; # day-2 body must be <= this fraction of its high-low range
-input longWickPct    = 0.5; # day-2 lower wick must be >= this fraction of its high-low range
-
-# ---- Prior downtrend: count of negative (red) days across the window before day 1 ----
-# Window is bars 2 .. (windowDays + 1), i.e. the windowDays sessions immediately
-# preceding day 1 (bar 1). Steeper/tighter trend = raise minNegativeDays or windowDays.
-def negativeDayCount = fold i = 2 to windowDays + 2
-    with count = 0
-    do count + (if GetValue(close, i) < GetValue(open, i) then 1 else 0);
-
-def priorDowntrend = negativeDayCount >= minNegativeDays;
-
-# ---- Day 1 (bar 1): long bearish candle continuing the downtrend ----
-def day1Bearish = close[1] < open[1];
-def day1Range   = high[1] - low[1];
-def day1Body    = open[1] - close[1];
-def day1Long    = day1Range > 0 and day1Body >= day1Range * longBodyPct;
+input windowDays        = 14;  # trading days before day 1 checked for the downtrend
+input minHigherCloseDays = 8;  # majority of the OTHER window days must close above today's close
+input day1LowerBandPct  = 0.3; # day-1 close must not fall within this bottom fraction of today's range
+input longBodyPct       = 0.5; # day-1 body must be >= this fraction of its high-low range
+input smallBodyPct      = 0.3; # day-2 body must be <= this fraction of its high-low range
+input longWickPct       = 0.5; # day-2 lower wick must be >= this fraction of its high-low range
 
 # ---- Day 2 / today (bar 0): small body with a long lower wick (the "star") ----
 def day2Range     = high - low;
@@ -32,7 +18,26 @@ def day2LowerWick = Min(open, close) - low;
 def day2Small     = day2Range > 0 and day2Body <= day2Range * smallBodyPct;
 def day2LongWick  = day2Range > 0 and day2LowerWick >= day2Range * longWickPct;
 
-def signal = priorDowntrend and day1Bearish and day1Long and day2Small and day2LongWick;
+# ---- Day 1 (bar 1): red candle, long-bodied, and not closing into today's lower band ----
+# "Not closing into today's lower band" keeps day 1 from overlapping today's range too
+# far down, so there's a real separation between the prior day and today's low.
+def day1Bearish        = close[1] < open[1];
+def day1Range          = high[1] - low[1];
+def day1Body           = open[1] - close[1];
+def day1Long           = day1Range > 0 and day1Body >= day1Range * longBodyPct;
+def day1AboveLowerBand = day2Range > 0 and close[1] >= low + day2Range * day1LowerBandPct;
+
+# ---- Prior downtrend: majority of the OTHER window days (bars 2..windowDays+1) closed ----
+# ---- above today's close, confirming today is actually the low of the window ----
+def higherCloseCount = fold i = 2 to windowDays + 2
+    with count = 0
+    do count + (if GetValue(close, i) > close then 1 else 0);
+
+def priorDowntrend = higherCloseCount >= minHigherCloseDays;
+
+def signal = priorDowntrend
+         and day1Bearish and day1Long and day1AboveLowerBand
+         and day2Small and day2LongWick;
 
 plot Marker = if signal then low - (high - low) * 0.15 else Double.NaN;
 Marker.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
