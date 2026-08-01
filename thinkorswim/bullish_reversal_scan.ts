@@ -58,13 +58,9 @@ def signal = priorDowntrend
          and day2InUpperBand;
 
 # ---- Match if the pattern fired on ANY of the last scanLookbackDays bars ----
-def occurredRecently = Sum(signal, scanLookbackDays) > 0;
-
-# ---- Evaluate as of today only ----
-# close[-1] (tomorrow's close) only exists on bars that already have a bar after
-# them, so it's NaN exactly on the most recent/current bar. This pins the "recent"
-# window to end at today regardless of how the Stock Hacker filter's own bar-offset
-# setting is configured.
-def isLastBar = IsNaN(close[-1]);
-
-plot scan = isLastBar and occurredRecently;
+# (Sum ends at whatever bar Stock Hacker evaluates - normally the most recent
+# completed bar for each symbol - so no extra "is this today" guard is needed;
+# a prior close[-1]-based NaN check was removed here because Stock Hacker's scan
+# engine doesn't reliably return NaN for it the way a live chart does, which was
+# silently making every match false.)
+plot scan = Sum(signal, scanLookbackDays) > 0;
