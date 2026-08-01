@@ -3,11 +3,13 @@
 #
 # Flags the first two candles of a Morning Star before the 3rd/confirmation
 # candle exists, so you can watch a name ahead of a possible reversal:
-#   Day 1 (bar 1, yesterday): long bearish candle continuing the downtrend
-#   Day 2 (bar 0, today - the scan day): body sits high in today's range,
-#     showing the rejection/indecision that a Morning Star's "star" candle needs
-# No 3rd candle is required by design - day 3 hasn't happened yet when the scan
-# fires; that candle is what would confirm the full Morning Star.
+#   Day 1: long bearish candle continuing the downtrend
+#   Day 2: body sits high in day 2's range, showing the rejection/indecision
+#     that a Morning Star's "star" candle needs
+# No 3rd candle is required by design - that candle is what would confirm the
+# full Morning Star. Matches any stock where this 2-candle setup occurred on
+# ANY of the last scanLookbackDays trading days (default 21, ~1 month), not
+# just today - so names that set up recently stay on your radar.
 #
 # Pair this Study Filter with these NATIVE Stock Hacker filters (no code needed,
 # and they run first so the scan is fast):
@@ -22,6 +24,7 @@ input windowDays       = 14;  # trading days before day 1 checked for the downtr
 input longBodyPct      = 0.5; # day-1 body must be >= this fraction of its high-low range
 input day1UpperBandPct = 0.5; # day-1 close must fall in the top fraction of today's range
 input day2UpperBandPct = 0.6; # day-2 (today's) body must reside in the top fraction of today's range
+input scanLookbackDays = 21;  # how many trailing trading days (~1 month) count as "recent"
 
 # ---- Day 2 / today (bar 0): body sits in the upper day2UpperBandPct of today's range ----
 def day2Range       = high - low;
@@ -49,13 +52,19 @@ def belowDay1Count = fold i = 2 to windowDays + 2
 
 def priorDowntrend = belowDay1Count == 0;
 
-# ---- Restrict to today only ----
+# ---- Per-bar pattern signal (same shape on every bar, like the chart study) ----
+def signal = priorDowntrend
+         and day1Bearish and day1Long and day1WithinToday
+         and day2InUpperBand;
+
+# ---- Match if the pattern fired on ANY of the last scanLookbackDays bars ----
+def occurredRecently = Sum(signal, scanLookbackDays) > 0;
+
+# ---- Evaluate as of today only ----
 # close[-1] (tomorrow's close) only exists on bars that already have a bar after
-# them, so it's NaN exactly on the most recent/current bar. This keeps the scan
-# from surfacing a stock whose pattern happened a few days ago instead of today,
-# regardless of how the Stock Hacker filter's own bar-offset setting is configured.
+# them, so it's NaN exactly on the most recent/current bar. This pins the "recent"
+# window to end at today regardless of how the Stock Hacker filter's own bar-offset
+# setting is configured.
 def isLastBar = IsNaN(close[-1]);
 
-plot scan = isLastBar and priorDowntrend
-        and day1Bearish and day1Long and day1WithinToday
-        and day2InUpperBand;
+plot scan = isLastBar and occurredRecently;
