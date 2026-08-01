@@ -4,8 +4,8 @@
 # Flags the first two candles of a Morning Star before the 3rd/confirmation
 # candle exists, so you can watch a name ahead of a possible reversal:
 #   Day 1 (bar 1, yesterday): long bearish candle continuing the downtrend
-#   Day 2 (bar 0, today - the scan day): small body with a long wick, showing
-#     the rejection/indecision that a Morning Star's "star" candle needs
+#   Day 2 (bar 0, today - the scan day): body sits high in today's range,
+#     showing the rejection/indecision that a Morning Star's "star" candle needs
 # No 3rd candle is required by design - day 3 hasn't happened yet when the scan
 # fires; that candle is what would confirm the full Morning Star.
 #
@@ -18,19 +18,15 @@
 #   Fundamental > Market Cap   > 50,000,000
 #
 
-input windowDays        = 14;  # trading days before day 1 checked for the downtrend
-input minHigherCloseDays = 8;  # majority of the OTHER window days must close above today's close
-input longBodyPct       = 0.5; # day-1 body must be >= this fraction of its high-low range
-input smallBodyPct      = 0.3; # day-2 body must be <= this fraction of its high-low range
-input longWickPct       = 0.5; # day-2 lower wick must be >= this fraction of its high-low range
-input day1UpperBandPct  = 0.5; # day-1 close must fall in the top fraction of today's range
+input windowDays       = 14;  # trading days before day 1 checked for the downtrend
+input longBodyPct      = 0.5; # day-1 body must be >= this fraction of its high-low range
+input day1UpperBandPct = 0.5; # day-1 close must fall in the top fraction of today's range
+input day2UpperBandPct = 0.6; # day-2 (today's) body must reside in the top fraction of today's range
 
-# ---- Day 2 / today (bar 0): small body with a long lower wick (the "star") ----
-def day2Range     = high - low;
-def day2Body      = AbsValue(close - open);
-def day2LowerWick = Min(open, close) - low;
-def day2Small     = day2Range > 0 and day2Body <= day2Range * smallBodyPct;
-def day2LongWick  = day2Range > 0 and day2LowerWick >= day2Range * longWickPct;
+# ---- Day 2 / today (bar 0): body sits in the upper day2UpperBandPct of today's range ----
+def day2Range       = high - low;
+def day2BodyLow     = Min(open, close);
+def day2InUpperBand = day2Range > 0 and day2BodyLow >= low + day2Range * (1 - day2UpperBandPct);
 
 # ---- Day 1 (bar 1, previous day): red, long-bodied, closes in today's upper band ----
 # Day 1's close must land in the upper day1UpperBandPct of today's high-low range,
@@ -43,13 +39,15 @@ def day1WithinToday   = day2Range > 0
                     and close[1] >= low + day2Range * (1 - day1UpperBandPct)
                     and close[1] <= high;
 
-# ---- Prior downtrend: majority of the OTHER window days (bars 2..windowDays+1) closed ----
-# ---- above today's close, confirming today is actually the low of the window ----
-def higherCloseCount = fold i = 2 to windowDays + 2
-    with count = 0
-    do count + (if GetValue(close, i) > close then 1 else 0);
+# ---- Prior downtrend: no day in the 14-day window closed below day 1's close ----
+# Window is bars 2..(windowDays+1), the windowDays sessions immediately preceding
+# day 1. This confirms day 1 is a genuine new low for the period, not just one red
+# day among choppy price action.
+def belowDay1Count = fold i = 2 to windowDays + 2
+    with cnt = 0
+    do cnt + (if GetValue(close, i) < close[1] then 1 else 0);
 
-def priorDowntrend = higherCloseCount >= minHigherCloseDays;
+def priorDowntrend = belowDay1Count == 0;
 
 # ---- Restrict to today only ----
 # close[-1] (tomorrow's close) only exists on bars that already have a bar after
@@ -60,4 +58,4 @@ def isLastBar = IsNaN(close[-1]);
 
 plot scan = isLastBar and priorDowntrend
         and day1Bearish and day1Long and day1WithinToday
-        and day2Small and day2LongWick;
+        and day2InUpperBand;
