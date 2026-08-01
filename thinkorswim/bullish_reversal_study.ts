@@ -44,7 +44,7 @@ Marker.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
 Marker.SetDefaultColor(Color.CYAN);
 Marker.SetLineWeight(3);
 
-AddChartBubble(signal, low, "POTENTIAL MORNING STAR", Color.GRAY, no);
+AddChartBubble(signal, low, "REV", Color.WHITE, no);
 AssignPriceColor(if signal then Color.CYAN else Color.CURRENT);
 
 Alert(signal, "Potential Morning Star setup: long red day + long-wick star day", Alert.BAR, Sound.Ring);
