@@ -1,26 +1,25 @@
 #
 # Short Opportunity Scan - Stock Hacker Study Filter.
 #
-# DEBUG STEP 1: testing bigUpMove in isolation - is the "parabolic move upward"
-# check itself finding anything? Report back the match count (with your usual
-# native filters - Optionable/NYSE/Price/Volume/Market Cap), then we'll add the
-# fading-candle and all-time-high checks back one at a time, the same way we
-# debugged the bullish reversal scan.
+# DEBUG STEP 2: rebuilding the "upward move" leg with two clearer criteria
+# instead of the Lowest/Highest %-move check:
+#   1. Uptrend: the 50-day SMA today is higher than the 50-day SMA
+#      risingLookback bars ago (default 15) - the average has been rising.
+#   2. Today's high is a new high for the trailing yearLookback bars
+#      (default 252, ~1 trading year) - a 1-year/52-week high, not the
+#      stock's literal all-time record.
 #
-# Full pattern (for reference, once this is confirmed working):
-#   Upside run: over the lookbackBars sessions before today (bars 1..lookbackBars),
-#     the move from the window's low to its high is at least minUpMovePct%.
-#   Today (bar 0), the fading candle: small body, long upper wick, closes lower.
-#   Today's high is a new all-time high vs. every prior loaded bar.
+# Testing this pair in isolation before adding back the fading-candle and
+# all-time-high checks. Report the match count.
 #
 
-input lookbackBars = 10; # how many candles before today the upside move is measured over
-input minUpMovePct  = 30; # required upside move (%) from the window's low to its high
+input smaLength      = 50;  # SMA length used for the uptrend check
+input risingLookback = 15;  # bars back the SMA is compared against to confirm it's rising
+input yearLookback    = 252; # trading days considered "the year" for the high check
 
-# ---- Upside run over the lookbackBars sessions before today ----
-def upMoveLow  = Lowest(low[1], lookbackBars);
-def upMoveHigh = Highest(high[1], lookbackBars);
-def upMovePct  = if upMoveLow > 0 then (upMoveHigh - upMoveLow) / upMoveLow * 100 else Double.NaN;
-def bigUpMove  = upMovePct >= minUpMovePct;
+def sma50      = SimpleMovingAvg(close, smaLength);
+def smaRising  = sma50 > sma50[risingLookback];
 
-plot scan = bigUpMove;
+def yearHigh = high >= Highest(high[1], yearLookback);
+
+plot scan = smaRising and yearHigh;
