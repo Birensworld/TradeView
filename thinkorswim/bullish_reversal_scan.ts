@@ -46,4 +46,11 @@ def day2LowerWick = Min(open, close) - low;
 def day2Small     = day2Range > 0 and day2Body <= day2Range * smallBodyPct;
 def day2LongWick  = day2Range > 0 and day2LowerWick >= day2Range * longWickPct;
 
-plot scan = priorDowntrend and day1Bearish and day1Long and day2Small and day2LongWick;
+# ---- Restrict to today only ----
+# close[-1] (tomorrow's close) only exists on bars that already have a bar after
+# them, so it's NaN exactly on the most recent/current bar. This keeps the scan
+# from surfacing a stock whose pattern happened a few days ago instead of today,
+# regardless of how the Stock Hacker filter's own bar-offset setting is configured.
+def isLastBar = IsNaN(close[-1]);
+
+plot scan = isLastBar and priorDowntrend and day1Bearish and day1Long and day2Small and day2LongWick;
