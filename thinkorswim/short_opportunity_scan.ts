@@ -45,4 +45,7 @@ def smallBody      = todayRange > 0 and todayBody <= todayRange * (smallBodyPct 
 def longUpperWick  = todayRange > 0 and todayUpperWick >= todayRange * (longWickPct / 100);
 def closesLower    = close < open;
 
-plot scan = bigUpMove and smallBody and longUpperWick and closesLower;
+# ---- Today's high reaches a new all-time high (vs. every prior loaded bar) ----
+def allTimeHigh = high >= HighestAll(high[1]);
+
+plot scan = bigUpMove and smallBody and longUpperWick and closesLower and allTimeHigh;
