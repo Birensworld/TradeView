@@ -64,13 +64,3 @@ def signal = priorDowntrend
 # engine doesn't reliably return NaN for it the way a live chart does, which was
 # silently making every match false.)
 plot scan = Sum(signal, scanLookbackDays) > 0;
-
-# ---- Diagnostics: isolate which sub-condition is zeroing out every match ----
-# Add each of these as its own Study Filter column with "> 0" to see which one(s)
-# never fire even at a 1-year lookback. Delete this block once the real culprit
-# is found - it's not needed for normal use.
-plot diagDay1Bearish     = Sum(day1Bearish, scanLookbackDays);
-plot diagDay1Long        = Sum(day1Long, scanLookbackDays);
-plot diagDay1WithinToday = Sum(day1WithinToday, scanLookbackDays);
-plot diagDay2InUpperBand = Sum(day2InUpperBand, scanLookbackDays);
-plot diagPriorDowntrend  = Sum(priorDowntrend, scanLookbackDays);
