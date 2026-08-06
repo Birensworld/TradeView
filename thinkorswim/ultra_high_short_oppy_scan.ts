@@ -1,13 +1,16 @@
 #
 # Ultra High - Short Oppy Scan - Stock Hacker Study Filter.
 #
-# Looks for a parabolic weekly run followed by a fresh high, as a short
-# candidate:
+# Looks for a parabolic weekly run that just topped out, as a short candidate:
 #   Weekly gain: over the last weeksBack weekly bars (default 10), the close
 #     has gained at least minGainPct% (default 80).
-#   Year high: today's daily high is a new high vs. the trailing
-#     yearLookbackDays trading days (default 252, ~1 trading year/52 weeks) -
-#     a rolling 1-year high, not a calendar-year-to-date high.
+#   Recent peak: the ALL-TIME-HIGH requirement was dropped in favor of a
+#     looser "the top is fresh" check - either yesterday was the highest daily
+#     high of the last recentDayLookback days (default 5), OR last week was
+#     the highest weekly high of the weeksBack window. Interpreted "the day or
+#     week before" as: the peak of the move landed on bar 1 (yesterday) at
+#     the daily level, or week 1 (last completed week) at the weekly level -
+#     flag if that's not what you meant.
 #
 # Weekly data is pulled into this daily-aggregation scan via
 # close(period = AggregationPeriod.WEEK), the standard thinkScript technique
@@ -21,9 +24,9 @@
 #   Fundamental > Market Cap   > 50,000,000
 #
 
-input weeksBack        = 10;  # how many weekly bars back the gain is measured over
-input minGainPct        = 80;  # required weekly close-to-close gain (%) over that span
-input yearLookbackDays  = 252; # trading days considered "the year" for the high check
+input weeksBack          = 10; # how many weekly bars back the gain is measured over
+input minGainPct         = 80; # required weekly close-to-close gain (%) over that span
+input recentDayLookback  = 5;  # daily days checked to confirm yesterday was the recent peak
 
 def wClose = close(period = AggregationPeriod.WEEK);
 def weeklyGainPct = if wClose[weeksBack] > 0
@@ -31,6 +34,15 @@ def weeklyGainPct = if wClose[weeksBack] > 0
                      else Double.NaN;
 def bigWeeklyGain = weeklyGainPct >= minGainPct;
 
-def yearHigh = high >= Highest(high[1], yearLookbackDays);
+# ---- Recent peak: yesterday was the high of the last few days ----
+def dailyRecentHigh    = Highest(high[1], recentDayLookback);
+def dayPeakWasYesterday = high[1] >= dailyRecentHigh;
 
-plot scan = bigWeeklyGain and yearHigh;
+# ---- Recent peak: last week was the high of the weeksBack window ----
+def wHigh              = high(period = AggregationPeriod.WEEK);
+def weeklyRecentHigh   = Highest(wHigh[1], weeksBack);
+def weekPeakWasLastWeek = wHigh[1] >= weeklyRecentHigh;
+
+def recentHighMove = dayPeakWasYesterday or weekPeakWasLastWeek;
+
+plot scan = bigWeeklyGain and recentHighMove;
