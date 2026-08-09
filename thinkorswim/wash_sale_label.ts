@@ -33,7 +33,14 @@ script DaysInMonth {
 
 input daysToAdd = 30;
 
-def d = GetYYYYMMDD();
+# "Last transaction close" = the most recently COMPLETED trading session's
+# close, not today's still-forming bar while the market is open. If we're on
+# the last/current bar and it's before 4:00pm ET (regular session still
+# running), fall back to yesterday's date; otherwise (after the close, or
+# looking at a historical bar) use the current bar's date directly.
+def isLastBar    = IsNaN(close[-1]);
+def afterClose   = SecondsFromTime(1600) >= 0;
+def d = if isLastBar and !afterClose then GetYYYYMMDD()[1] else GetYYYYMMDD();
 
 def yr0 = Floor(d / 10000);
 def mo0 = Floor((d - yr0 * 10000) / 100);
