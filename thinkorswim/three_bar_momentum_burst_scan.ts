@@ -7,6 +7,7 @@
 #     the 1st bar's close.
 #   At least minPositiveBars (default 2) of the 3 bars must be "positive" -
 #     closing higher than the bar before it.
+#   Today (bar 0) must also close higher than bar 1 (the most recent of the 3).
 #
 # "Value" in the uptrend check is read as closing price, matching the
 # "closing price" wording used for the positive-bar check - flag if you meant
@@ -36,4 +37,7 @@ def pos3 = close3 > close4; # 1st bar positive
 def positiveCount = (if pos1 then 1 else 0) + (if pos2 then 1 else 0) + (if pos3 then 1 else 0);
 def enoughPositive = positiveCount >= minPositiveBars;
 
-plot scan = uptrend and enoughPositive;
+# ---- Last bar (today, bar 0) must close higher than the bar before it ----
+def lastBarUp = close > close1;
+
+plot scan = uptrend and enoughPositive and lastBarUp;

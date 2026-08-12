@@ -23,14 +23,16 @@ def pos3 = close3 > close4; # 1st bar positive
 def positiveCount = (if pos1 then 1 else 0) + (if pos2 then 1 else 0) + (if pos3 then 1 else 0);
 def enoughPositive = positiveCount >= minPositiveBars;
 
-def signal = uptrend and enoughPositive;
+# ---- Last bar (today, bar 0) must close higher than the bar before it ----
+def lastBarUp = close > close1;
+
+def signal = uptrend and enoughPositive and lastBarUp;
 
 plot Marker = if signal then low - (high - low) * 0.15 else Double.NaN;
 Marker.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
 Marker.SetDefaultColor(Color.BLUE);
 Marker.SetLineWeight(3);
 
-AddChartBubble(signal, low, "3BAR BURST", Color.BLUE, no);
 AssignPriceColor(if signal then Color.BLUE else Color.CURRENT);
 
 Alert(signal, "3 Bar Momentum Burst: 2%+ 3-bar uptrend with 2+ positive bars", Alert.BAR, Sound.Ring);
