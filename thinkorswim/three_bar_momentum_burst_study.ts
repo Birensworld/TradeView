@@ -3,8 +3,9 @@
 # Same logic as three_bar_momentum_burst_scan.ts, for visually verifying hits
 # on a daily chart. Apply via: Studies > Edit Studies > Create, paste this in.
 #
-# Blue up arrow on the bar where the pattern is confirmed (looking back at the
-# 3 most recently completed bars before that point).
+# Green up arrow on the bar where the pattern is confirmed (looking back at the
+# 3 most recently completed bars before that point). Price color turns green
+# only on the last/current bar, not on every past match.
 #
 
 input minGainPct      = 3; # 3rd bar close must exceed 1st bar close by more than this %
@@ -28,7 +29,9 @@ def signal = uptrend and enoughPositive and lastBarUp;
 
 plot Marker = if signal then low - (high - low) * 0.15 else Double.NaN;
 Marker.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
-Marker.SetDefaultColor(Color.BLUE);
+Marker.SetDefaultColor(Color.GREEN);
 Marker.SetLineWeight(3);
 
-AssignPriceColor(if signal then Color.BLUE else Color.CURRENT);
+# ---- Green price color only on the last/current bar, not every past match ----
+def isLastBar = IsNaN(close[-1]);
+AssignPriceColor(if signal and isLastBar then Color.GREEN else Color.CURRENT);
