@@ -1,19 +1,13 @@
 #
 # 3 Bar Momentum Burst Scan - Stock Hacker Study Filter.
+# Rewritten as a "Three White Soldiers" pattern: the last 3 bars (today back
+# through 2 days ago) are all green (close > open), and the close gained at
+# least minGainPct% (default 3) from the 1st of those 3 to the 3rd (today).
 #
-# Looks at the 3 most recently completed daily bars before today (bar 3 =
-# oldest/"1st bar", bar 2 = "2nd bar", bar 1 = most recent/"3rd bar"):
-#   Uptrend: the 3rd bar's close is more than minGainPct% (default 3) above
-#     the 1st bar's close.
-#   At least minPositiveBars (default 2) of the 2 available day-over-day
-#     transitions within those 3 bars must be positive (bar1 > bar2 and/or
-#     bar2 > bar3). Only 3 bars are referenced total - no 4th/prior bar - so
-#     whether bar 3 (the oldest) was itself an up day isn't checked.
-#   Today (bar 0) must also close higher than bar 1 (the most recent of the 3).
-#
-# "Value" in the uptrend check is read as closing price, matching the
-# "closing price" wording used for the positive-bar check - flag if you meant
-# high/low instead.
+# If a streak runs longer than 3 greens in a row, this still only looks at
+# the LAST 3 - Stock Hacker always evaluates "today" as the endpoint, so a
+# 4th or 5th consecutive green day just shifts which 3 bars are "the pattern"
+# without any extra logic needed.
 #
 # Pair this Study Filter with these NATIVE Stock Hacker filters (no code needed):
 #   Basic Info  > Optionable   = Yes
@@ -23,21 +17,12 @@
 #   Fundamental > Market Cap   > 50,000,000
 #
 
-input minGainPct      = 3; # 3rd bar close must exceed 1st bar close by more than this %
-input minPositiveBars = 2; # how many of the 2 bar-to-bar transitions must be positive
+input minGainPct = 3; # required % gain from the 1st soldier's close to the 3rd (today)
 
-def close1 = close[1]; # 3rd bar (most recent of the 3)
-def close2 = close[2]; # 2nd bar
-def close3 = close[3]; # 1st bar (oldest of the 3)
+def isGreen = close > open;
+def last3Green = isGreen and isGreen[1] and isGreen[2];
 
-def uptrend = if close3 > 0 then (close1 - close3) / close3 * 100 > minGainPct else no;
+def gainPct = if close[2] > 0 then (close - close[2]) / close[2] * 100 else Double.NaN;
+def bigGain = gainPct >= minGainPct;
 
-def pos1 = close1 > close2; # bar1 higher than bar2
-def pos2 = close2 > close3; # bar2 higher than bar3
-def positiveCount = (if pos1 then 1 else 0) + (if pos2 then 1 else 0);
-def enoughPositive = positiveCount >= minPositiveBars;
-
-# ---- Last bar (today, bar 0) must close higher than the bar before it ----
-def lastBarUp = close > close1;
-
-plot scan = uptrend and enoughPositive and lastBarUp;
+plot scan = last3Green and bigGain;
