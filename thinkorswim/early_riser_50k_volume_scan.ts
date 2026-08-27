@@ -1,8 +1,11 @@
 #
-# Premarket Breakout (First 5 Min) Scan - Stock Hacker Study Filter.
+# Early Riser 50K Volume Scan - Stock Hacker Study Filter.
 #
 # Flags stocks whose price during the FIRST 5 MINUTES of the regular session
-# (9:30-9:35 AM ET) traded above that day's pre-market high (4:00-9:30 AM ET).
+# (9:30-9:35 AM ET) traded above that day's pre-market high (4:00-9:30 AM ET),
+# AND have traded at least minSessionVolume shares (default 50,000) so far
+# today by that point - filters out the breakout from happening on illiquid,
+# barely-traded volume.
 #
 # THIS IS AN INTRADAY SCAN, unlike the daily-bar scans elsewhere in this repo:
 #   - Set the scan's aggregation/time frame to 1 minute (not Daily/EOD).
@@ -12,13 +15,17 @@
 #   - Requires extended-hours (pre-market) data to be included in the feed
 #     the scan uses, or preMarketHigh below will just be NaN all day.
 #
-# Pair this Study Filter with these NATIVE Stock Hacker filters (no code needed):
+# Pair this Study Filter with these NATIVE Stock Hacker filters (no code needed) -
+# note the native Volume filter is a DAILY-volume liquidity floor, separate
+# from the 50K early-session volume this script checks:
 #   Basic Info  > Optionable   = Yes
 #   Basic Info  > Exchange     = NYSE
 #   Basic Info  > Last Price   > 15
 #   Basic Info  > Volume       > 3,000,000
 #   Fundamental > Market Cap   > 50,000,000
 #
+
+input minSessionVolume = 50000; # cumulative shares traded so far today, required by the breakout
 
 def newDay = GetDay() != GetDay()[1];
 
@@ -29,10 +36,14 @@ def preMarketHigh =
     else if inPreMarket then Max(high, preMarketHigh[1])
     else preMarketHigh[1];
 
+# ---- Cumulative volume for today, resetting at each new session ----
+def cumVolume = if newDay then volume else cumVolume[1] + volume;
+def enoughVolume = cumVolume >= minSessionVolume;
+
 # ---- First 5 minutes of the regular session: 9:30:00 - 9:34:59 ET ----
 def inOpeningRange = SecondsFromTime(0930) >= 0 and SecondsFromTime(0930) < 300;
 
-def brokeOutNow = inOpeningRange and high > preMarketHigh;
+def brokeOutNow = inOpeningRange and high > preMarketHigh and enoughVolume;
 
 # ---- Carry "yes, it broke out" forward for the rest of the day once true ----
 def brokeOutToday =
